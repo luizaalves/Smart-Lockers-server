@@ -8,7 +8,7 @@ import threading
 
 # Internal module imports
 from .models import User  # Models module from db import
-from .mqtt import mqtt_client
+from .mqtt_client import *
 
 # MySQL Driver Configuration
 pymysql.install_as_MySQLdb()
