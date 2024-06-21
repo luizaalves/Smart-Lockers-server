@@ -1,0 +1,19 @@
+{% extends 'bootstrap/base.html' %}
+
+<title>BCD29008</title>
+
+{% block navbar %}
+    {#renderizar o menu no topo da página#}
+    {{nav.menu.render() }}
+{% endblock %}
+
+
+{% block content %}
+    <div class="container">
+    {% block app_content %}
+    
+    {#outras páginas colorarão o conteúdo aqui#}
+    {% endblock %}
+
+    </div>
+{% endblock %}

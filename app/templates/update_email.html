@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% import 'bootstrap/wtf.html' as wtf %}
+{% block app_content %}
+
+    <h1>Atualizar e-mail do Usuário</h1>
+
+    <div class="row">
+        <div class="col-md-4">
+            <form method="POST" action="{{ url_for('update_email') }}">
+                {{ form.hidden_tag() }}
+                {{ wtf.form_field(form.nome) }}
+                {{ wtf.form_field(form.old_email) }}
+                {{ wtf.form_field(form.email) }}
+                <button type="button" id="checkEmail">Verificar Email</button><br>
+                <span id="emailStatus"></span>
+                {% for error in form.email.errors %}
+                    <span style="color: red;">[{{ error }}]</span>
+                {% endfor %}
+                {{ wtf.form_field(form.senha) }}
+                {{ wtf.form_field(form.tipo_usuario) }}
+                {{ wtf.form_field(form.submit, class_='btn btn-primary') }}
+            </form>
+        </div>
+    </div>
+    <script>
+        document.getElementById('checkEmail').addEventListener('click', function() {
+            // Limpar mensagem anterior
+            document.getElementById('emailStatus').textContent = '';
+            
+            var email = document.getElementById('email').value;
+            fetch('/check_email', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: 'email=' + encodeURIComponent(email)
+            })
+            .then(response => response.json())
+            .then(data => {
+                var status = document.getElementById('emailStatus');
+                if (data.exists) {
+                    status.textContent = 'Email já está em uso';
+                    status.style.color = 'red';
+                } else {
+                    status.textContent = 'Email disponível';
+                    status.style.color = 'green';
+                }
+            });
+        });
+    </script>
+{% endblock %}
