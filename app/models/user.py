@@ -1,12 +1,12 @@
-from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import Column, Integer, String
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import  UserMixin
-
+from .. import db
+from flask import session
 
 NAME_MAX_SIZE = 40
 PASS_MAX_SIZE = 40
 
-db = SQLAlchemy()
 
 class User(UserMixin, db.Model):
     """
@@ -47,13 +47,14 @@ class User(UserMixin, db.Model):
     """
     __tablename__ = 'user'
 
-    id_user = db.Column(db.Integer, primary_key=True, autoincrement=True, nullable=False)
-    name = db.Column(db.String,nullable=False)
-    email = db.Column(db.String(40), unique=True, nullable=False)
-    password = db.Column(db.Text(), nullable=False)
-    user_type = db.Column(db.String(10), nullable=False)
+    id_user = Column(Integer, primary_key=True, autoincrement=True, nullable=False)
+    name = Column(String,nullable=False)
+    email = Column(String(40), unique=True, nullable=False)
+    password = Column(String(120), nullable=False)
+    user_type = Column(String(10), nullable=False)
+    tag = Column(String(20))
 
-    def __init__(self, name, email, password, user_type):
+    def __init__(self, name, email, password, user_type, tag):
         """
         Inicializa um novo objeto User com nome, email, senha e tipo de usuário.
 
@@ -65,10 +66,10 @@ class User(UserMixin, db.Model):
         """
         self.name = name
         self.email = email
-        #self.password = generate_password_hash(password) # TODO Verify why it's not working
-        self.password = password
+        self.password = generate_password_hash(password) # TODO Verify why it's not working
+        # self.password = password
         self.user_type = user_type
-
+        self.tag = tag
     def set_password(self, password):
         """
         Define a senha do usuário, armazenando-a como um hash.
@@ -79,8 +80,7 @@ class User(UserMixin, db.Model):
         Returns:
             str: A senha armazenada como um hash.
         """
-        #self.password = generate_password_hash(password) # TODO Verify why it's not working
-        self.password = password
+        self.password = generate_password_hash(password) # TODO Verify why it's not working
         return self.password
     
     def set_email(self, email):
@@ -123,7 +123,7 @@ class User(UserMixin, db.Model):
         Returns:
             User: O objeto User correspondente ao ID fornecido.
         """
-        return User.query.get(int(user_id))
+        return session.get(User, user_id)
 
     def get_id(self):
         """

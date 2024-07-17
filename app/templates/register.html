@@ -9,6 +9,7 @@
             <form method="POST" action="{{ url_for('register') }}">
                 {{ form.hidden_tag() }}
                 {{ wtf.form_field(form.nome) }}
+                {{ wtf.form_field(form.tag) }}
                 {{ wtf.form_field(form.email) }}
                 {{ wtf.form_field(form.senha) }}
                 {{ wtf.form_field(form.confirmar_senha) }}

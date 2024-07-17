@@ -44,6 +44,7 @@ class RegisterForm(FlaskForm):
     """
     nome = StringField('Nome', validators=[DataRequired('Campo obrigatório')])
     email = StringField('E-mail', validators=[DataRequired('Campo obrigatório'), Email('E-mail inválido')])
+    tag = StringField('Tag', validators=[DataRequired('Campo obrigatório')])
     senha = PasswordField('Senha', validators=[DataRequired('Campo obrigatório')])
     confirmar_senha = PasswordField('Confirmar Senha', validators=[DataRequired('Campo obrigatório'), EqualTo('senha', message='As senhas devem corresponder')])
     tipo_usuario = SelectField('Tipo de Usuário', choices=[('comum', 'Comum'), ('admin', 'Admin')], validators=[DataRequired('Campo obrigatório')])
@@ -69,6 +70,7 @@ class UpdateEmailPasswordForm(FlaskForm): # TODO: talvez eu possa unir os dois, 
     """
     #se for email de  quem fez  o login, autoriza
     nome = StringField('Nome', validators=[DataRequired('Campo obrigatório')])
+    tag = StringField('Tag', validators=[DataRequired('Campo obrigatório')])
     email = StringField('Novo Email', validators=[DataRequired(), Email()])
     senha = PasswordField('Senha', validators=[DataRequired()])
     confirmar_senha = PasswordField('Confirmar Nova Senha', validators=[DataRequired(), EqualTo('senha', message='As senhas devem corresponder')])

@@ -1,13 +1,16 @@
 import flask
-from flask import render_template, session, jsonify, redirect, url_for, session, request
+from flask_sqlalchemy import SQLAlchemy
+from flask import render_template, session, jsonify, redirect, url_for, request
 from flask_login import current_user, login_required, login_user, logout_user
 from flask_nav.elements import Navbar, View, Text
 import logging
+from sqlalchemy.orm import Session
+from sqlalchemy import select
 
 # Internal module imports
-from . import db, forms, nav
+from . import nav,db
 from .forms import *
-from .models import User
+from .models.user import User
 
 @nav.navigation()
 def menu():
@@ -32,7 +35,9 @@ def menu():
     """
     menu = Navbar('Smart Locks Server')
     if session.get('logado'):
-        usuario_logado = User.query.filter_by(id_user=session.get('usuario')).first()
+        user_id = session['usuario']
+        statement = select(User).filter_by(id_user=user_id)
+        usuario_logado = db.session.execute(statement).scalars().first()
         menu.items.append(Text('Hello, '+usuario_logado.name))
         if(usuario_logado.user_type=='admin'):
             menu.items.append(View('Registrar usuário', 'register'))
@@ -82,9 +87,13 @@ def init_routes(app):
     def login():
         form = LoginForm()
         if form.validate_on_submit():
-            usuario = User.query.filter_by(email=form.email.data).first()
+            statement = select(User).filter_by(email=form.email.data)
+            usuario = db.session.execute(statement).scalars().first()
+            if(usuario.password == 'admin'):
+                usuario.set_password('admin')
+                db.session.commit()
             if usuario is not None:
-                if usuario.password==form.password.data:
+                if usuario.check_password(form.password.data):
                     session['logado']=True
                     session['usuario']=usuario.id_user
                     print(f'Usuário logado com ID: {session["usuario"]}, nome: {usuario.name}')
@@ -92,8 +101,8 @@ def init_routes(app):
                     if(usuario.email=='admin'):
                         return flask.redirect(flask.url_for('update'))
                     return flask.redirect(flask.url_for('inicial'))
-            else:
-                return render_template('login.html', form=form)
+                else:
+                    return render_template('login.html', form=form)
         session['usuario'] = None
         session['logado'] = False
         return render_template('login.html', form=form)
@@ -108,6 +117,7 @@ def init_routes(app):
                     name= form.nome.data,
                     email=form.email.data,
                     password=form.senha.data,
+                    tag=form.tag.data,
                     user_type=form.tipo_usuario.data
                 )
                 db.session.add(usuario)
@@ -123,7 +133,8 @@ def init_routes(app):
     @app.route('/check_email', methods=['POST'])
     def check_email():
         email = request.form.get('email')
-        user = User.query.filter_by(email=email).first()
+        statement = select(User).filter_by(email=email)
+        user = db.session.execute(statement).scalars().first()
         if user:
             return jsonify({'exists': True})
         return jsonify({'exists': False})
@@ -133,11 +144,12 @@ def init_routes(app):
     def update_email():
         form = UpdateEmailForm()
         if form.validate_on_submit():
-            user = User.query.filter_by(email=form.old_email.data).first()
+            statement = select(User).filter_by(email=form.old_email.data)
+            user = db.session.execute(statement).scalars().first()
             user.email = form.email.data
             user.name = form.nome.data
             user.user_type=form.tipo_usuario.data
-            if(form.senha.data == user.password):
+            if(user.check_password(form.senha.data)):
                 db.session.commit()
                 print('Suas informações foram atualizadas com sucesso!')
                 return redirect(url_for('inicial'))
@@ -148,11 +160,12 @@ def init_routes(app):
     def update_password():
         form = UpdatePasswordForm()
         if form.validate_on_submit():
-            user = User.query.filter_by(email=form.email.data).first()
+            statement = select(User).filter_by(email=form.email.data)
+            user = db.session.execute(statement).scalars().first()
             user.email = form.email.data
             user.name = form.nome.data
             user.user_type=form.tipo_usuario.data
-            user.password = form.confirmar_senha.data
+            user.password = user.set_password(form.confirmar_senha.data)
             db.session.commit()
             print('Suas informações foram atualizadas com sucesso!')
             return redirect(url_for('inicial'))
@@ -166,9 +179,11 @@ def init_routes(app):
             return redirect(url_for('inicial'))
         form = UpdateEmailPasswordForm()
         if form.validate_on_submit():
-            user = User.query.filter_by(email='admin').first()                
+            statement = select(User).filter_by(email='admin')
+            user = db.session.execute(statement).scalars().first()
             user.email = form.email.data
             user.name = form.nome.data
+            user.tag = form.tag.data
             user.password = form.confirmar_senha.data
             db.session.commit()
             print('Suas informações foram atualizadas com sucesso!')
