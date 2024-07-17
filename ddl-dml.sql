@@ -3,9 +3,10 @@ DROP TABLE IF EXISTS user;
 CREATE TABLE IF NOT EXISTS user (
     id_user INT PRIMARY KEY AUTO_INCREMENT,
 	name VARCHAR(100) NOT NULL,
-    email VARCHAR(100) NOT NULL UNIQUE,
-    password VARCHAR(100) NOT NULL,
-    user_type VARCHAR(6) NOT NULL
+    email VARCHAR(40) NOT NULL UNIQUE,
+    password VARCHAR(120) NOT NULL,
+    tag VARCHAR(20) NOT NULL,
+    user_type VARCHAR(10) NOT NULL
 );
 INSERT INTO user VALUES (1,'','admin','admin','admin');
 
