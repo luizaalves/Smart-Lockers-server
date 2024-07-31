@@ -11,6 +11,7 @@ from sqlalchemy import select
 from . import nav,db
 from .forms import *
 from .models.user import User
+from .models.locker_schedules import LockerSchedules
 
 @nav.navigation()
 def menu():
@@ -36,7 +37,7 @@ def menu():
     menu = Navbar('Smart Locks Server')
     if session.get('logado'):
         user_id = session['usuario']
-        statement = select(User).filter_by(id_user=user_id)
+        statement = select(User).filter_by(id=user_id)
         usuario_logado = db.session.execute(statement).scalars().first()
         menu.items.append(Text('Hello, '+usuario_logado.name))
         if(usuario_logado.user_type=='admin'):
@@ -69,7 +70,22 @@ def init_routes(app):
             Redirect: O redirecionamento para a página.
         """
         if session.get('logado'):
-            return render_template('index.html')
+            #usuario comum?
+                #sim-busco o locker_Schedule desse usuário
+                #nao-busco o locker schedule de todos.
+            user_id = session['usuario']
+            statement = select(User).filter_by(id=user_id)
+            usuario = db.session.execute(statement).scalars().first()
+            locker_schedules = None
+            if(usuario.user_type == 'admin'):
+                locker_schedules = LockerSchedules.query.all()                
+            else:
+                statement = select(LockerSchedules).filter_by(user_id=user_id)
+                locker_schedules = db.session.execute(statement).scalars().all()
+            for sch in locker_schedules:
+                
+                print(f"Nome: {sch.user.name}")
+            return render_template('locker_schedule.html', locker_schedules=locker_schedules)
         session['usuario'] = None
         session['logado'] = False
         return flask.redirect(flask.url_for('login'))
@@ -89,13 +105,16 @@ def init_routes(app):
         if form.validate_on_submit():
             statement = select(User).filter_by(email=form.email.data)
             usuario = db.session.execute(statement).scalars().first()
-            if(usuario.password == 'admin'):
-                usuario.set_password('admin')
-                db.session.commit()
+            try:
+                if(usuario.password == 'admin'):
+                    usuario.set_password('admin')
+                    db.session.commit()
+            except:
+                pass
             if usuario is not None:
                 if usuario.check_password(form.password.data):
                     session['logado']=True
-                    session['usuario']=usuario.id_user
+                    session['usuario']=usuario.id
                     print(f'Usuário logado com ID: {session["usuario"]}, nome: {usuario.name}')
                     login_user(usuario)
                     if(usuario.email=='admin'):

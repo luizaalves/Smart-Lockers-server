@@ -1,0 +1,42 @@
+{% extends 'bootstrap/base.html' %}
+
+<title>BCD29008</title>
+
+{% block navbar %}
+    {#renderizar o menu no topo da página#}
+    {{nav.menu.render() }}
+{% endblock %}
+
+
+{% block content %}
+    <div class="container">
+    {% block app_content %}
+    <h1>Locker Schedule</h1>
+    <table border="1">
+      <thead>
+        <tr>
+          <th>Usuário</th>
+          <th>Open Time</th>
+          <th>Close Time</th>
+          <th>Retrieve Time</th>
+          <th>End Retrieve Time</th>
+          <th>Compartment Number</th>
+          <th>Locker name</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for schedule in locker_schedules %}
+        <tr>
+          <td>{{ schedule.user.name }}</td>
+          <td>{{ schedule.open_time }}</td>
+          <td>{{ schedule.close_time }}</td>
+          <td>{{ schedule.retrieve_time }}</td>
+          <td>{{ schedule.end_retrieve_time }}</td>
+          <td>{{ schedule.compartment.number }}</td>
+          <td>{{ schedule.compartment.locker.name }}</td>
+        </tr>
+        {% endfor %}
+    {% endblock %}
+
+    </div>
+{% endblock %}
