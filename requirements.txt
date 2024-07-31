@@ -13,3 +13,4 @@ SQLAlchemy==2.0.0
 email_validator==1.1.3
 paho-mqtt
 cryptography
+Flask-MQTT==1.2.1
