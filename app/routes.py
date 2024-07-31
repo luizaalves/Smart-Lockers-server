@@ -12,6 +12,7 @@ from . import nav,db
 from .forms import *
 from .models.user import User
 from .models.locker_schedules import LockerSchedules
+from .models.compartment_usage import CompartmentUsage
 
 @nav.navigation()
 def menu():
@@ -82,10 +83,10 @@ def init_routes(app):
             else:
                 statement = select(LockerSchedules).filter_by(user_id=user_id)
                 locker_schedules = db.session.execute(statement).scalars().all()
-            for sch in locker_schedules:
-                
-                print(f"Nome: {sch.user.name}")
-            return render_template('locker_schedule.html', locker_schedules=locker_schedules)
+            statement = select(CompartmentUsage).filter_by(user_id=user_id)
+            compartment_in_use = db.session.execute(statement).scalars().first()
+
+            return render_template('locker_schedule.html', locker_schedules=locker_schedules, compartment_in_use=compartment_in_use)
         session['usuario'] = None
         session['logado'] = False
         return flask.redirect(flask.url_for('login'))

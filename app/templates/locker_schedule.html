@@ -11,17 +11,50 @@
 {% block content %}
     <div class="container">
     {% block app_content %}
-    <h1>Locker Schedule</h1>
-    <table border="1">
+    {% if compartment_in_use %}
+    <h1>Compartment in Use</h1>
+    <table style="width: 100%; text-align: center;" border="1">
       <thead>
         <tr>
-          <th>Usuário</th>
+          <th rowspan="2">User name</th>
+          <th colspan="2">Stored Items Date</th>
+          <th rowspan="2">Compartment Number</th>
+          <th rowspan="2">Locker name</th>
+        </tr>
+        <tr>
+          <th>Open Time</th>
+          <th>Close Time</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>{{ compartment_in_use.user.name }}</td>
+          <td>{{ compartment_in_use.open_time }}</td>
+          <td>{{ compartment_in_use.close_time }}</td>
+          <td>{{ compartment_in_use.compartments.number }}</td>
+          <td>{{ compartment_in_use.compartments.locker.name }}</td>
+        </tr>
+      </tbody>
+    </table>
+    {% else %}
+    <p>No compartments in use.</p>
+    {% endif %}
+    
+    <h1>Locker Schedule</h1>
+    <table style="width: 100%; text-align: center;" border="1">
+      <thead>
+        <tr>
+          <th rowspan="2">User name</th>
+          <th colspan="2">Stored Items Date</th>
+          <th colspan="2">Removed Items Date</th>
+          <th rowspan="2">Compartment Number</th>
+          <th rowspan="2">Locker name</th>
+        </tr>
+        <tr>
           <th>Open Time</th>
           <th>Close Time</th>
           <th>Retrieve Time</th>
           <th>End Retrieve Time</th>
-          <th>Compartment Number</th>
-          <th>Locker name</th>
         </tr>
       </thead>
       <tbody>
@@ -36,6 +69,8 @@
           <td>{{ schedule.compartment.locker.name }}</td>
         </tr>
         {% endfor %}
+      </tbody>
+    </table>
     {% endblock %}
 
     </div>
