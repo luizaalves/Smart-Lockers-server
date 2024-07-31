@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String
+from sqlalchemy.orm import relationship
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import  UserMixin
 from .. import db
@@ -47,12 +48,16 @@ class User(UserMixin, db.Model):
     """
     __tablename__ = 'user'
 
-    id_user = Column(Integer, primary_key=True, autoincrement=True, nullable=False)
+    id = Column(Integer, primary_key=True, autoincrement=True, nullable=False)
     name = Column(String,nullable=False)
     email = Column(String(40), unique=True, nullable=False)
     password = Column(String(120), nullable=False)
     user_type = Column(String(10), nullable=False)
     tag = Column(String(20))
+
+    compartment_usage = relationship("CompartmentUsage", back_populates='user', lazy=True)
+    locker_schedules = relationship("LockerSchedules", back_populates='user', lazy=True)
+
 
     def __init__(self, name, email, password, user_type, tag):
         """
@@ -132,4 +137,4 @@ class User(UserMixin, db.Model):
         Returns:
             str: O ID do usuário.
         """
-        return str(self.id_user)
+        return str(self.id)
