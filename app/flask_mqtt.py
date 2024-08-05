@@ -62,15 +62,16 @@ def init_mqtt(app):
                     user = get_user_by_tag(tag)
                     if(user is None):
                         print(f"Tag não cadastrada: {tag}")
+                        buffer = ':'.join(['0' , locker_name, tag])
+                        client.publish("/door_command/response", payload=buffer, qos=2)
+
                         return
                     compartment_usage = get_compartment_usage(user)
                     if compartment_usage is not None:
                         print(f"user: {user.name} is using a compartment already, user is removing objects")
                         compartment = get_compartment_by_id(compartment_usage.compartment_id)
-                        buffer = ':'.join([str(compartment.number) , locker_name, tag])
-                        # if user.id not in published_users:
+                        buffer = ':'.join([str(compartment.number) , locker_name, tag,'remove'])
                         client.publish("/door_command/response", payload=buffer, qos=2)
-                            # published_users[user.id] = True
                         #random num pra  enviar no topico "/door_command/response" o numero do compartimento
                         #random das portas livres e enviar no topico "/door_command/response" o numero do compartimento
                     else:
@@ -81,11 +82,11 @@ def init_mqtt(app):
                         if available_numbers:
                             chosen_number = random.choice(available_numbers)
                             print(f"Chosen number: {chosen_number}")
-                            buffer = ':'.join([str(chosen_number) , locker_name, tag])
-                            # if user.id not in published_users:
+                            buffer = ':'.join([str(chosen_number) , locker_name, tag, 'store'])
                             client.publish("/door_command/response", payload=buffer, qos=2)
-                                # published_users[user.id] = True
                         else:
+                            buffer = ':'.join([str(-1) , locker_name, tag])
+                            client.publish("/door_command/response", payload=buffer, qos=2)
                             print("No available compartments")
 
                 else:
