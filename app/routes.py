@@ -79,14 +79,15 @@ def init_routes(app):
             usuario = db.session.execute(statement).scalars().first()
             locker_schedules = None
             if(usuario.user_type == 'admin'):
-                locker_schedules = LockerSchedules.query.all()                
+                locker_schedules = LockerSchedules.query.all()    
+                compartment_in_use = CompartmentUsage.query.all()
             else:
                 statement = select(LockerSchedules).filter_by(user_id=user_id)
                 locker_schedules = db.session.execute(statement).scalars().all()
-            statement = select(CompartmentUsage).filter_by(user_id=user_id)
-            compartment_in_use = db.session.execute(statement).scalars().first()
+                statement = select(CompartmentUsage).filter_by(user_id=user_id)
+                compartment_in_use = db.session.execute(statement).scalars().first()
 
-            return render_template('locker_schedule.html', locker_schedules=locker_schedules, compartment_in_use=compartment_in_use)
+            return render_template('locker_schedule.html', locker_schedules=locker_schedules, compartment_in_use=compartment_in_use, type = usuario.user_type)
         session['usuario'] = None
         session['logado'] = False
         return flask.redirect(flask.url_for('login'))
