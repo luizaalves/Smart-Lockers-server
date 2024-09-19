@@ -39,13 +39,27 @@ def create_app(config_class='config.Config'):
         from .routes import init_routes
         from .models import compartment, locker, user, locker_schedules,compartment_usage
         from .flask_mqtt import init_mqtt
+        from dotenv import load_dotenv
+        import os
+        load_dotenv()
+        
         init_routes(app)
         db.create_all()  # Create tables in the database
-        app.config['MQTT_BROKER_URL'] = '192.168.1.7'  # URL do broker MQTT
-        app.config['MQTT_BROKER_PORT'] = 1883        # Porta do broker MQTT
-        app.config['MQTT_USERNAME'] = ''             # Usuário MQTT, se necessário
-        app.config['MQTT_PASSWORD'] = ''             # Senha MQTT, se necessário
-        app.config['MQTT_KEEPALIVE'] = 60            # Keep-alive para a conexão MQTT
+        app.config['MQTT_BROKER_URL'] = os.getenv("MQTT_BROKER_URL")  # URL do broker MQTT
+        app.config['MQTT_BROKER_PORT'] = int(os.getenv("MQTT_BROKER_PORT"))        # Porta do broker MQTT
+        app.config['MQTT_USERNAME'] = os.getenv("MQTT_USERNAME")             # Usuário MQTT, se necessário
+        app.config['MQTT_PASSWORD'] = os.getenv("MQTT_PASSWORD")             # Senha MQTT, se necessário
+        app.config['MQTT_KEEPALIVE'] = int(os.getenv("MQTT_KEEPALIVE"))            # Keep-alive para a conexão MQTT
         app.config['MQTT_TLS_ENABLED'] = False       # TLS, se necessário
+
+
+        app.config['MAIL_SERVER'] = os.getenv("MAIL_SERVER")  # Exemplo com o Gmail
+        app.config['MAIL_PORT'] = int(os.getenv("MAIL_PORT"))
+        app.config['MAIL_USE_TLS'] = True
+        app.config['MAIL_USERNAME'] = os.getenv("MAIL_USERNAME")  # Substitua pelo seu e-mail
+        app.config['MAIL_PASSWORD'] = os.getenv("MAIL_PASSWORD")  # Substitua pela sua senha de e-mail
+        app.config['MAIL_DEFAULT_SENDER'] = os.getenv("MAIL_DEFAULT_SENDER")  # Nome e e-mail do remetente
+        
         init_mqtt(app)
+
     return app
