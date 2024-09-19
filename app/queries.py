@@ -129,6 +129,15 @@ with current_app.app_context():
             db.session.commit()
         except ValueError:
             return
+    
+    def get_admins():
+        from . import db
+        from .models.user import User
+
+        users_admins = db.session.query(User.email).filter(User.user_type == "admin").all()
+
+        return [email[0] for email in users_admins]
+    
     def get_available_compartments(locker_id):
         from . import db
         from .models.compartment import Compartment

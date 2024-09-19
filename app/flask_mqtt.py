@@ -1,17 +1,20 @@
 from flask_mqtt import Mqtt
 import time
-from .queries import get_user_by_tag, get_compartment_usage, get_locker, set_locker, set_compartment, check_compartment_by_num, get_compartment_by_id, get_available_compartments, set_compartment_usage, set_locker_schedule
+from .queries import *
 import random
 from flask import current_app
+from flask_mail import Mail, Message
 
 mqtt = Mqtt()
 topic = "/door_command/request"
 topic2 = "/door/info"
+topic3 = "/weird_activity"
 global_uuid = 0  
 
 
 def init_mqtt(app):
     mqtt.init_app(app)
+    mail = Mail(app)
 
     @mqtt.on_connect()
     def handle_connect(client, userdata, flags, rc):
@@ -19,6 +22,7 @@ def init_mqtt(app):
             print('Conectado ao broker MQTT com sucesso')
             client.subscribe(topic, qos=2)
             client.subscribe(topic2, qos=2)
+            client.subscribe(topic3, qos=2)
         else:
             print(f'Falha ao conectar ao broker MQTT, código: {rc}')
 
@@ -32,7 +36,25 @@ def init_mqtt(app):
 
             message = msg.payload.decode('utf-8', errors='ignore')
             print(f"message: {message}")
-
+            if msg.topic == "/weird_activity":
+                parts = msg.payload.decode('utf-8', errors='ignore').split(':')
+                if len(parts) == 2:
+                    compartment = parts[0]
+                    locker_name = parts[1]
+                print(f"Possível arrombamento no compartimento {message}")
+                users_admins = get_admins()
+                
+                msg = Message(
+                    'Security alert',  sender='smart.lockers.notification@gmail.com', # Assunto do e-mail
+                    recipients = users_admins  # E-mail do destinatário
+                )
+                msg.body = f"Possible invasion in compartment {compartment}. \nLocker name: {locker_name}"
+                
+                with app.app_context():
+                    mail.send(msg)
+    
+                    return "E-mail enviado com sucesso!"
+                
             if msg.topic == "/door_command/request":
                 parts = msg.payload.decode('utf-8', errors='ignore').split(':')
                 if len(parts) == 3:
