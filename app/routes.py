@@ -6,53 +6,79 @@ from flask_nav.elements import Navbar, View, Text
 import logging
 from sqlalchemy.orm import Session
 from sqlalchemy import select
+from datetime import datetime
 
 # Internal module imports
 from . import nav,db
 from .forms import *
 from .models.user import User
+from .models.locker import Lockers
 from .models.locker_schedules import LockerSchedules
 from .models.compartment_usage import CompartmentUsage
+from .models.compartment import Compartment
 
-@nav.navigation()
-def menu():
-    """
-    Cria o menu de navegação para o Smart Locks Server.
 
-    Esta função define a barra de navegação usando a biblioteca Flask-Nav.
-    O menu muda dinamicamente com base no estado de login do usuário e seu
-    tipo (admin ou comum).
-
-    Se o usuário estiver logado:
-        - Exibe uma mensagem de saudação com o nome do usuário.
-        - Adiciona opções de menu específicas para administradores, como 
-          'Registrar usuário' e 'Atualizar e-mail/senha do usuário'.
-        - Adiciona a opção 'Exit' para permitir que o usuário saia.
-
-    Se o usuário não estiver logado:
-        - Exibe apenas a opção de menu 'Início'.
-
-    Returns:
-        Navbar: O objeto Navbar configurado com os itens de menu apropriados.
-    """
-    menu = Navbar('Smart Locks Server')
-    if session.get('logado'):
-        user_id = session['usuario']
-        statement = select(User).filter_by(id=user_id)
-        usuario_logado = db.session.execute(statement).scalars().first()
-        menu.items.append(Text('Hello, '+usuario_logado.name))
-        if(usuario_logado.user_type=='admin'):
-            menu.items.append(View('Registrar usuário', 'register'))
-            if(usuario_logado.email!='admin'):
-                menu.items.append(View('Atualizar e-mail usuário', 'update_email'))
-                menu.items.append(View('Atualizar senha usuário', 'update_password'))
-        menu.items.append(View('Exit', 'sair'))
-        return menu
-    menu.items = [View('Início', 'inicial')]
-    return menu
-    
 def init_routes(app):
-    @app.route('/')
+
+    @app.route('/edit_number', methods=['GET', 'POST'])
+    def edit_number():
+        if session.get('logado'):
+            user_id = session['usuario']
+            statement = select(User).filter_by(id=user_id)
+            usuario = db.session.execute(statement).scalars().first()
+            if(usuario.user_type=='admin'):
+                statement = select(CompartmentUsage).filter_by(user_id=user_id)
+                compartment_in_use = db.session.execute(statement).scalars().first()
+                statement = select(Compartment).filter_by(id=compartment_in_use.compartment_id)
+                compartment = db.session.execute(statement).scalars().first()
+
+                form = CompartmentAdmin()
+
+                if form.validate_on_submit():
+                    novo_valor = form.compartment.data
+
+                if compartment:
+                    form.compartment.data = compartment.number
+                return render_template('locker_schedule.html', form=form)
+
+    @nav.navigation()
+    def menu():
+        """
+        Cria o menu de navegação para o Smart Locks Server.
+
+        Esta função define a barra de navegação usando a biblioteca Flask-Nav.
+        O menu muda dinamicamente com base no estado de login do usuário e seu
+        tipo (admin ou comum).
+
+        Se o usuário estiver logado:
+            - Exibe uma mensagem de saudação com o nome do usuário.
+            - Adiciona opções de menu específicas para administradores, como 
+            'Registrar usuário' e 'Atualizar e-mail/senha do usuário'.
+            - Adiciona a opção 'Exit' para permitir que o usuário saia.
+
+        Se o usuário não estiver logado:
+            - Exibe apenas a opção de menu 'Início'.
+
+        Returns:
+            Navbar: O objeto Navbar configurado com os itens de menu apropriados.
+        """
+        menu = Navbar('Smart Locks Server')
+        if session.get('logado'):
+            user_id = session['usuario']
+            statement = select(User).filter_by(id=user_id)
+            usuario_logado = db.session.execute(statement).scalars().first()
+            menu.items.append(Text('Hello, '+usuario_logado.name))
+            if(usuario_logado.user_type=='admin'):
+                menu.items.append(View('Registrar usuário', 'register'))
+                if(usuario_logado.email!='admin'):
+                    menu.items.append(View('Atualizar e-mail usuário', 'update_email'))
+                    menu.items.append(View('Atualizar senha usuário', 'update_password'))
+            menu.items.append(View('Exit', 'sair'))
+            return menu
+        menu.items = [View('Início', 'inicial')]
+        return menu
+
+    @app.route('/', methods=['GET', 'POST'])
     def inicial():
         """
         Renderiza a página de navegação para o Smart Locks Server.
@@ -71,14 +97,45 @@ def init_routes(app):
             Redirect: O redirecionamento para a página.
         """
         if session.get('logado'):
-            #usuario comum?
-                #sim-busco o locker_Schedule desse usuário
-                #nao-busco o locker schedule de todos.
+            form = CompartmentAdmin()
             user_id = session['usuario']
             statement = select(User).filter_by(id=user_id)
             usuario = db.session.execute(statement).scalars().first()
             locker_schedules = None
             if(usuario.user_type == 'admin'):
+                statement = select(CompartmentUsage).filter_by(user_id=user_id)
+                compartment_in_use = db.session.execute(statement).scalars().first()
+                
+                if compartment_in_use is not None:
+                    statement = select(Compartment).filter_by(id=compartment_in_use.compartment_id)
+                    compartment = db.session.execute(statement).scalars().first()
+                    print(f"compartment num: {compartment.number}")
+
+                    if compartment is not None:
+                        form.compartment.data = compartment.number
+                        form.locker_name.data = compartment.locker.name
+
+                if form.validate_on_submit():
+                    statement = select(Lockers).filter_by(name=form.locker_name.data)
+                    locker = db.session.execute(statement).scalars().first()
+                    if locker is not None:
+                        statement = select(Compartment).filter_by(number=form.compartment.data, locker_id=locker.id)#add o locker_name
+                        compartment = db.session.execute(statement).scalars().first()
+                        if compartment is not None:
+                            statement = select(CompartmentUsage).filter_by(compartment_id=compartment.id)
+                            compartment_in_use = db.session.execute(statement).scalars().first()
+                            if compartment_in_use is not None:
+                                new_compartment_in_use = CompartmentUsage(
+                                    id_user=user_id,
+                                    open_time=datetime.now(),
+                                    close_time=datetime.now(),
+                                    id_compartment=compartment.id
+                                )
+                                db.session.add(new_compartment_in_use)
+                                db.session.commit()
+                                print( 'deveria esperar apertar o botao')
+                                return redirect(url_for('inicial'))
+
                 locker_schedules = LockerSchedules.query.all()    
                 compartment_in_use = CompartmentUsage.query.all()
             else:
@@ -87,7 +144,7 @@ def init_routes(app):
                 statement = select(CompartmentUsage).filter_by(user_id=user_id)
                 compartment_in_use = db.session.execute(statement).scalars().first()
 
-            return render_template('locker_schedule.html', locker_schedules=locker_schedules, compartment_in_use=compartment_in_use, type = usuario.user_type)
+            return render_template('locker_schedule.html', locker_schedules=locker_schedules, compartment_in_use=compartment_in_use, type = usuario.user_type, form=form)
         session['usuario'] = None
         session['logado'] = False
         return flask.redirect(flask.url_for('login'))

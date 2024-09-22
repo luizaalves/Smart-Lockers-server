@@ -2,6 +2,11 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField, SelectField
 from wtforms.validators import DataRequired, Email, EqualTo
 
+class CompartmentAdmin(FlaskForm):
+    compartment = StringField('Compartment')
+    locker_name = StringField('Locker name')
+    submit = SubmitField('Trocar')
+
 class LoginForm(FlaskForm):
     """
     Formulário de login para o aplicativo Flask.

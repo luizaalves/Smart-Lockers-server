@@ -43,37 +43,41 @@ with current_app.app_context():
         db.session.add(compart_use)
         db.session.commit()
     
-    def set_locker_schedule(open_time, close_time, user_id, locker_id, num):
+    def set_locker_schedule(open_time, close_time, id_user, locker_id, num):
         from . import db
         from .models.compartment import Compartment
         from .models.compartment_usage import CompartmentUsage
         from .models.locker_schedules import LockerSchedules
         from .models.user import User
 
-        statement = select(CompartmentUsage).filter_by(user_id=user_id)
-        compartment_usage = db.session.execute(statement).scalars().first()
-
-        statement = select(User).filter_by(id=user_id)
-        user = db.session.execute(statement).scalars().first()
-
-        stmt = delete(CompartmentUsage).where(CompartmentUsage.user == user)
-        db.session.execute(stmt)
-        db.session.commit()
-
         statement = select(Compartment).filter_by(locker_id=locker_id, number = num)
         compartment = db.session.execute(statement).scalars().first()
+        
+        statement = select(CompartmentUsage).filter_by(compartment_id=compartment.id)
+        compartment_usage_list = db.session.execute(statement).scalars().all()
 
-        locker_schedule = LockerSchedules(
-            id_user = user_id,
-            id_compartment = compartment.id,
-            open_time= compartment_usage.open_time,
-            close_time = compartment_usage.close_time,
-            retrieve_time = timestamp_to_datetime(open_time),
-            end_retrieve_time = timestamp_to_datetime(close_time)
-        )
+        for compartment_usage in compartment_usage_list:
+            statement = select(User).filter_by(id=compartment_usage.user_id)
+            user = db.session.execute(statement).scalars().first()
 
-        db.session.add(locker_schedule)
-        db.session.commit()
+            stmt = delete(CompartmentUsage).where(CompartmentUsage.user == compartment_usage.user)
+            db.session.execute(stmt)
+            db.session.commit()
+
+            statement = select(Compartment).filter_by(locker_id=locker_id, number = num)
+            compartment = db.session.execute(statement).scalars().first()
+
+            locker_schedule = LockerSchedules(
+                id_user = compartment_usage.user.id,
+                id_compartment = compartment.id,
+                open_time= compartment_usage.open_time,
+                close_time = compartment_usage.close_time,
+                retrieve_time = timestamp_to_datetime(open_time),
+                end_retrieve_time = timestamp_to_datetime(close_time)
+            )
+
+            db.session.add(locker_schedule)
+            db.session.commit()
         
     def get_locker(locker_name):
         from . import db
