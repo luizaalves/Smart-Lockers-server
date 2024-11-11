@@ -1,6 +1,13 @@
 from sqlalchemy import select, delete, update
 from flask import current_app
 from datetime import datetime
+from . import db
+from .models.user import User
+from .models.compartment_usage import CompartmentUsage
+from .models.compartment import Compartment
+from .models.locker_schedules import LockerSchedules
+from .models.locker import Lockers
+from .models.forgot_password import ForgotPassword
 
 def timestamp_to_datetime(timestamp):
     return datetime.fromtimestamp(int(timestamp))
@@ -8,28 +15,18 @@ def timestamp_to_datetime(timestamp):
 with current_app.app_context():
     def get_user_by_tag(tag):
         """Retorna um usuário pela tag."""
-        from . import db
-        from .models.user import User
         statement = select(User).filter_by(tag=tag)
         user = db.session.execute(statement).scalars().first()
         return user
         
     def get_compartment_usage(user):
-        """Retorna um usuário pela tag."""
-        from . import db
-        from .models.user import User
-        from .models.compartment_usage import CompartmentUsage
-
+        """Retorna um compartimento em uso pelo usuário."""
         statement = select(CompartmentUsage).filter_by(user_id=user.id)
         compartment_usage = db.session.execute(statement).scalars().first()
         return compartment_usage
     
     def set_compartment_usage(open_time, close_time, user_id, locker_id, num):
-        from . import db
-        from .models.compartment import Compartment
-        from .models.compartment_usage import CompartmentUsage
-        from .models.user import User
-
+        """Configura um compartimento em uso """
         statement = select(Compartment).filter_by(locker_id=locker_id, number = num)
         compartment = db.session.execute(statement).scalars().first()
 
@@ -44,12 +41,7 @@ with current_app.app_context():
         db.session.commit()
     
     def set_locker_schedule(open_time, close_time, id_user, locker_id, num):
-        from . import db
-        from .models.compartment import Compartment
-        from .models.compartment_usage import CompartmentUsage
-        from .models.locker_schedules import LockerSchedules
-        from .models.user import User
-
+        """Registra o uso de um compartimento"""
         statement = select(Compartment).filter_by(locker_id=locker_id, number = num)
         compartment = db.session.execute(statement).scalars().first()
         
@@ -80,16 +72,13 @@ with current_app.app_context():
             db.session.commit()
         
     def get_locker(locker_name):
-        from . import db
-        from .models.locker import Lockers
-        
+        """Retorna o locker pelo nome"""
         statement = select(Lockers).filter_by(name=locker_name)
         locker = db.session.execute(statement).scalars().first()
         return locker
         
     def check_compartment_by_num(num, locker_id):
-        from . import db
-        from .models.compartment import Compartment
+        """Retorna o objeto compartimento a partir do nome e locker id"""
         statement = select(Compartment).filter_by(number=num)
         compartment = db.session.execute(statement).scalars().first()
         if compartment is not None:
@@ -98,17 +87,13 @@ with current_app.app_context():
         return None
 
     def get_compartment_by_id(id):
-        from . import db
-        from .models.compartment import Compartment
-
+        """Retorna o objeto compartimento a partir do id"""
         statement = select(Compartment).filter_by(id=id)
         compartment = db.session.execute(statement).scalars().first()
         return compartment
     
     def set_locker(locker_name):
-        from . import db
-        from .models.locker import Lockers
-
+        """Configura um compartimento a partir do nome do armário"""
         locker = Lockers (
             name= locker_name
         )
@@ -116,9 +101,7 @@ with current_app.app_context():
         db.session.commit()
 
     def set_compartment(locker_id, num):
-        from . import db
-        from .models.compartment import Compartment
-    
+        """Configura um compartimento a partir do número e locker id"""
         statement = select(Compartment).filter_by(locker_id=locker_id, number=num)
         existing_compartment = db.session.execute(statement).scalars().first()
         if existing_compartment:
@@ -135,19 +118,13 @@ with current_app.app_context():
             return
     
     def get_admins():
-        from . import db
-        from .models.user import User
-
+        """Retorna uma lista com todos os e-mails dos administradores do sistema"""
         users_admins = db.session.query(User.email).filter(User.user_type == "admin").all()
 
         return [email[0] for email in users_admins]
     
     def get_available_compartments(locker_id):
-        from . import db
-        from .models.compartment import Compartment
-        from .models.compartment_usage import CompartmentUsage
-
-        # Subquery to get all used compartment IDs for the given locker_id
+        """Retorna compartimentos disponiveis pelo locker id"""
         used_compartments_subquery = (
             db.session.query(CompartmentUsage.compartment_id)
             .join(Compartment, Compartment.id == CompartmentUsage.compartment_id)
@@ -155,7 +132,6 @@ with current_app.app_context():
             .subquery()
         )
 
-        # Main query to get all compartment numbers that are not in the used compartments subquery
         available_compartments = (
             db.session.query(Compartment.number)
             .filter(
@@ -165,16 +141,12 @@ with current_app.app_context():
             .all()
         )
 
-        # Convert the result to a list of numbers
         available_compartments_numbers = [compartment.number for compartment in available_compartments]
         
         return available_compartments_numbers
     
     def set_code_validation_password(email, code, time_generated):
-        from . import db
-        from .models.forgot_password import ForgotPassword
-        from .models.user import User
-
+        """Configura o código de validação para o 'Esqueceu sua senha'; com 15 minutos de validade"""
         statement = select(User).filter_by(email=email)
         user = db.session.execute(statement).scalars().first()
         if user is not None:
@@ -198,9 +170,7 @@ with current_app.app_context():
                 db.session.commit()
 
     def get_date_from_code_validation_password(code):
-        from . import db
-        from .models.forgot_password import ForgotPassword
-
+        """Retorna a data gerada do código para validação no 'esqueceu sua senha'"""
         statement = select(ForgotPassword).filter_by(code=code)
         forgot_password = db.session.execute(statement).scalars().first()
 
@@ -209,9 +179,7 @@ with current_app.app_context():
         return None
     
     def get_email_from_code_validation_password(code):
-        from . import db
-        from .models.forgot_password import ForgotPassword
-
+        """Retorna o e-mail a partir do código para validação no 'esqueceu sua senha'"""
         statement = select(ForgotPassword).filter_by(code=code)
         forgot_password = db.session.execute(statement).scalars().first()
 
@@ -220,8 +188,7 @@ with current_app.app_context():
         return None
     
     def update_password_user(email, new_password):
-        from . import db
-        from .models.user import User
+        "Atualiza a senha do usuário a partir do e-mail"
         statement = select(User).filter_by(email=email)
         user = db.session.execute(statement).scalars().first()
         if user is not None:
