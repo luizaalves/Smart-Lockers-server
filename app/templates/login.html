@@ -3,10 +3,30 @@
 {% block app_content %}
 
     <h1>Autenticação de usuário</h1>
-
     <div class="row">
         <div class="col-md-4">
-            {{wtf.quick_form(form, button_map={'submit' : 'primary'}) }}
+            <form method="POST" action="">
+                {{ form.hidden_tag() }}
+
+                <div class="form-group">
+                    {{ form.email.label(class="form-label") }}
+                    {{ form.email(class="form-control") }}
+                </div>
+
+                <div class="form-group">
+                    {{ form.password.label(class="form-label") }}
+                    {{ form.password(class="form-control") }}
+                </div>
+
+                <div class="form-group">
+                    {{ form.submit(class="btn btn-primary") }}
+                </div>
+            </form>
+            <form method="POST" action="{{ url_for('forgot_password') }}">
+                <div class="form-group">
+                    {{ form.forgot_password(class="btn btn-link") }}
+                </div>
+            </form>
         </div>
     </div>
 

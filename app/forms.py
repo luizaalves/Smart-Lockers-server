@@ -2,6 +2,19 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField, SelectField
 from wtforms.validators import DataRequired, Email, EqualTo
 
+class ResetPasswordForm(FlaskForm):
+    email = StringField('Email', render_kw={'readonly': True})
+    new_password = PasswordField('Nova Senha', validators=[DataRequired()])
+    confirm_password = PasswordField('Confirmar Nova Senha', validators=[DataRequired(), EqualTo('new_password', message='As senhas devem corresponder.')])
+    submit = SubmitField('Enviar')
+
+class ForgotPasswordForm(FlaskForm):
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    submit = SubmitField('Enviar link de redefinição')
+    link = SubmitField('Já possuo link de redefinição')
+    code = StringField('Código')
+    submit_code = SubmitField('Validar')
+
 class CompartmentAdmin(FlaskForm):
     compartment = StringField('Compartment')
     locker_name = StringField('Locker name')
@@ -25,6 +38,7 @@ class LoginForm(FlaskForm):
     email = StringField('User', validators=[DataRequired('Required field')])
     password = PasswordField('Password', validators=[DataRequired('Required field')])
     submit = SubmitField('Sign in')
+    forgot_password = SubmitField('Forgot password')
 
 class RegisterForm(FlaskForm):
     """

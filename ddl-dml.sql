@@ -47,6 +47,15 @@ CREATE TABLE locker_schedule (
 	FOREIGN KEY (user_id) REFERENCES user(id_user)
 );
 
+CREATE TABLE forgot_password (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    code VARCHAR(10) NOT NULL,
+    date_time DATETIME NOT NULL,
+	user_id INT NOT NULL,
+	FOREIGN KEY (user_id) REFERENCES user(id),
+    UNIQUE (user_id)
+);
+
 COMMIT;
 
 drop table compartment_usage;

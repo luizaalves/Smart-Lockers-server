@@ -4,6 +4,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import  UserMixin
 from .. import db
 from flask import session
+from .forgot_password import ForgotPassword
 
 NAME_MAX_SIZE = 40
 PASS_MAX_SIZE = 40
@@ -57,6 +58,7 @@ class User(UserMixin, db.Model):
 
     compartment_usage = relationship("CompartmentUsage", back_populates='user', lazy=True)
     locker_schedules = relationship("LockerSchedules", back_populates='user', lazy=True)
+    forgot_password = relationship("ForgotPassword", back_populates='user', lazy=True)
 
 
     def __init__(self, name, email, password, user_type, tag):

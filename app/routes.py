@@ -6,7 +6,10 @@ from flask_nav.elements import Navbar, View, Text
 import logging
 from sqlalchemy.orm import Session
 from sqlalchemy import select
-from datetime import datetime
+from datetime import datetime, timedelta
+import random, string, pytz
+from .queries import *
+from flask_mail import Mail, Message
 
 # Internal module imports
 from . import nav,db
@@ -181,10 +184,60 @@ def init_routes(app):
                     return flask.redirect(flask.url_for('inicial'))
                 else:
                     return render_template('login.html', form=form)
+        elif form.forgot_password.data:
+            return redirect(url_for('forgot_password'))
         session['usuario'] = None
         session['logado'] = False
         return render_template('login.html', form=form)
     
+    @app.route('/forgot_password', methods=['GET', 'POST'])
+    def forgot_password():
+        form = ForgotPasswordForm()
+        timezone = pytz.timezone("America/Sao_Paulo")
+        print("entrou2")
+        if form.validate_on_submit():
+            if form.submit.data:
+                email = form.email.data
+                date_time = datetime.now(timezone)
+                code=random_string(6)
+                set_code_validation_password(code=code, email=email, time_generated=date_time)
+                mail = Mail(app)
+                msg = Message(
+                    'Smart Lockers - Reset Password',  sender='smart.lockers.notification@gmail.com',
+                    recipients = str(email).split()
+                )
+                msg.body = f"Code to reset password {code}. \nValid for 15 minutes."
+                
+                mail.send(msg)
+
+            elif form.submit_code.data:  
+                #buscar no banco 
+                any_date = get_date_from_code_validation_password(form.code.data)
+
+                if any_date is not None and any_date.tzinfo is None:
+                    any_date = timezone.localize(any_date)
+
+                date_time = datetime.now(timezone)
+                if date_time - any_date < timedelta(minutes=15):
+                    return redirect(url_for('reset_password', email=get_email_from_code_validation_password(form.code.data)))
+                else:
+                    return redirect(url_for('login'))
+
+        return render_template('forgot_password.html', form=form)
+    @app.route('/reset_password', methods=['GET','POST'])
+    def reset_password():
+        form = ResetPasswordForm()
+        email = request.args.get('email') or session.get('email')
+        if request.args.get('email') is not None:
+            session['email'] = request.args.get('email')
+        form.email.data = email
+        if form.validate_on_submit():
+            form.new_password.data
+            update_password_user(email, form.new_password.data)
+            session['email'] = None
+            return redirect(url_for('login'))
+        return render_template('reset_password.html', form=form, email=email)
+
     @app.route('/register', methods=['GET', 'POST'])
     def register():
         form = RegisterForm()
@@ -238,13 +291,8 @@ def init_routes(app):
     def update_password():
         form = UpdatePasswordForm()
         if form.validate_on_submit():
-            statement = select(User).filter_by(email=form.email.data)
-            user = db.session.execute(statement).scalars().first()
-            user.email = form.email.data
-            user.name = form.nome.data
-            user.user_type=form.tipo_usuario.data
-            user.password = user.set_password(form.confirmar_senha.data)
-            db.session.commit()
+            update_password_user(form.email.data, form.confirmar_senha.data)
+            
             print('Suas informações foram atualizadas com sucesso!')
             return redirect(url_for('inicial'))
         return render_template('update_password.html', form=form)
@@ -267,4 +315,8 @@ def init_routes(app):
             print('Suas informações foram atualizadas com sucesso!')
             return redirect(url_for('inicial'))
         return render_template('update.html', form=form)
+    
+    def random_string(length):
+        characters = string.ascii_letters + string.digits
+        return ''.join(random.choice(characters) for _ in range(length))
     

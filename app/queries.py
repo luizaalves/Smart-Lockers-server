@@ -1,4 +1,4 @@
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, update
 from flask import current_app
 from datetime import datetime
 
@@ -147,7 +147,6 @@ with current_app.app_context():
         from .models.compartment import Compartment
         from .models.compartment_usage import CompartmentUsage
 
-
         # Subquery to get all used compartment IDs for the given locker_id
         used_compartments_subquery = (
             db.session.query(CompartmentUsage.compartment_id)
@@ -170,3 +169,61 @@ with current_app.app_context():
         available_compartments_numbers = [compartment.number for compartment in available_compartments]
         
         return available_compartments_numbers
+    
+    def set_code_validation_password(email, code, time_generated):
+        from . import db
+        from .models.forgot_password import ForgotPassword
+        from .models.user import User
+
+        statement = select(User).filter_by(email=email)
+        user = db.session.execute(statement).scalars().first()
+        if user is not None:
+            statement = select(ForgotPassword).filter_by(user=user)
+            forgot_password = db.session.execute(statement).scalars().first()
+            if forgot_password is None:
+                password = ForgotPassword (
+                    code_generated= code,
+                    id_user=user.id,
+                    date_time = time_generated
+                )
+                db.session.add(password)
+                db.session.commit()
+            else:
+                stmt = (
+                    update(ForgotPassword).
+                    where(ForgotPassword.user_id == user.id).
+                    values(code=code, date_time=time_generated)
+                )
+                db.session.execute(stmt)
+                db.session.commit()
+
+    def get_date_from_code_validation_password(code):
+        from . import db
+        from .models.forgot_password import ForgotPassword
+
+        statement = select(ForgotPassword).filter_by(code=code)
+        forgot_password = db.session.execute(statement).scalars().first()
+
+        if forgot_password is not None:
+            return forgot_password.date_time
+        return None
+    
+    def get_email_from_code_validation_password(code):
+        from . import db
+        from .models.forgot_password import ForgotPassword
+
+        statement = select(ForgotPassword).filter_by(code=code)
+        forgot_password = db.session.execute(statement).scalars().first()
+
+        if forgot_password is not None:
+            return forgot_password.user.email
+        return None
+    
+    def update_password_user(email, new_password):
+        from . import db
+        from .models.user import User
+        statement = select(User).filter_by(email=email)
+        user = db.session.execute(statement).scalars().first()
+        if user is not None:
+            user.password = user.set_password(new_password)
+            db.session.commit()
