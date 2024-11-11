@@ -1,17 +1,12 @@
-import flask
-from flask_sqlalchemy import SQLAlchemy
+import flask, logging, random, string, pytz
 from flask import render_template, session, jsonify, redirect, url_for, request
 from flask_login import current_user, login_required, login_user, logout_user
 from flask_nav.elements import Navbar, View, Text
-import logging
-from sqlalchemy.orm import Session
 from sqlalchemy import select
 from datetime import datetime, timedelta
-import random, string, pytz
 from .queries import *
 from flask_mail import Mail, Message
 
-# Internal module imports
 from . import nav,db
 from .forms import *
 from .models.user import User
@@ -19,7 +14,6 @@ from .models.locker import Lockers
 from .models.locker_schedules import LockerSchedules
 from .models.compartment_usage import CompartmentUsage
 from .models.compartment import Compartment
-
 
 def init_routes(app):
 
@@ -136,7 +130,6 @@ def init_routes(app):
                                 )
                                 db.session.add(new_compartment_in_use)
                                 db.session.commit()
-                                print( 'deveria esperar apertar o botao')
                                 return redirect(url_for('inicial'))
 
                 locker_schedules = LockerSchedules.query.all()    
@@ -194,7 +187,6 @@ def init_routes(app):
     def forgot_password():
         form = ForgotPasswordForm()
         timezone = pytz.timezone("America/Sao_Paulo")
-        print("entrou2")
         if form.validate_on_submit():
             if form.submit.data:
                 email = form.email.data
@@ -211,7 +203,6 @@ def init_routes(app):
                 mail.send(msg)
 
             elif form.submit_code.data:  
-                #buscar no banco 
                 any_date = get_date_from_code_validation_password(form.code.data)
 
                 if any_date is not None and any_date.tzinfo is None:
@@ -222,7 +213,6 @@ def init_routes(app):
                     return redirect(url_for('reset_password', email=get_email_from_code_validation_password(form.code.data)))
                 else:
                     return redirect(url_for('login'))
-
         return render_template('forgot_password.html', form=form)
     @app.route('/reset_password', methods=['GET','POST'])
     def reset_password():
