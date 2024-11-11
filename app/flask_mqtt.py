@@ -6,11 +6,11 @@ from flask import current_app
 from flask_mail import Mail, Message
 
 mqtt = Mqtt()
-topic = "/door_command/request"
-topic2 = "/door/info"
-topic3 = "/weird_activity"
+topic_request = "/door_command/request"
+topic_response = "/door_command/response"
+topic_send_info = "/door/info"
+topic_notify_error = "/weird_activity"
 global_uuid = 0  
-
 
 def init_mqtt(app):
     mqtt.init_app(app)
@@ -20,9 +20,9 @@ def init_mqtt(app):
     def handle_connect(client, userdata, flags, rc):
         if rc == 0:
             print('Conectado ao broker MQTT com sucesso')
-            client.subscribe(topic, qos=2)
-            client.subscribe(topic2, qos=2)
-            client.subscribe(topic3, qos=2)
+            client.subscribe(topic_request, qos=2)
+            client.subscribe(topic_send_info, qos=2)
+            client.subscribe(topic_notify_error, qos=2)
         else:
             print(f'Falha ao conectar ao broker MQTT, código: {rc}')
 
@@ -36,7 +36,7 @@ def init_mqtt(app):
 
             message = msg.payload.decode('utf-8', errors='ignore')
             print(f"message: {message}")
-            if msg.topic == "/weird_activity":
+            if msg.topic == topic_notify_error:
                 parts = msg.payload.decode('utf-8', errors='ignore').split(':')
                 if len(parts) == 2:
                     compartment = parts[0]
@@ -45,8 +45,8 @@ def init_mqtt(app):
                 users_admins = get_admins()
                 
                 msg = Message(
-                    'Security alert',  sender='smart.lockers.notification@gmail.com', # Assunto do e-mail
-                    recipients = users_admins  # E-mail do destinatário
+                    'Security alert',  sender='smart.lockers.notification@gmail.com',
+                    recipients = users_admins
                 )
                 msg.body = f"Possible invasion in compartment {compartment}. \nLocker name: {locker_name}"
                 
@@ -55,7 +55,7 @@ def init_mqtt(app):
     
                     return "E-mail enviado com sucesso!"
                 
-            if msg.topic == "/door_command/request":
+            if msg.topic == topic_request:
                 parts = msg.payload.decode('utf-8', errors='ignore').split(':')
                 if len(parts) == 3:
                     tag = parts[0]
@@ -70,14 +70,11 @@ def init_mqtt(app):
                         return
                     locker = get_locker(locker_name)
                     if locker is None:
-                        #salva no banco o locker e num_compartments
                         set_locker(locker_name)
-                        print('set locker')
 
                     locker_obj = get_locker(locker_name)
 
                     for i in range(1, num_compartments+1):
-                        print('set compartment ', i)
                         if check_compartment_by_num(i, locker_obj.id) is None:
                             set_compartment(locker_obj.id, i)
                     
@@ -85,7 +82,7 @@ def init_mqtt(app):
                     if(user is None):
                         print(f"Tag não cadastrada: {tag}")
                         buffer = ':'.join(['0' , locker_name, tag])
-                        client.publish("/door_command/response", payload=buffer, qos=2)
+                        client.publish(topic_response, payload=buffer, qos=2)
 
                         return
                     compartment_usage = get_compartment_usage(user)
@@ -93,9 +90,7 @@ def init_mqtt(app):
                         print(f"user: {user.name} is using a compartment already, user is removing objects")
                         compartment = get_compartment_by_id(compartment_usage.compartment_id)
                         buffer = ':'.join([str(compartment.number) , locker_name, tag,'remove'])
-                        client.publish("/door_command/response", payload=buffer, qos=2)
-                        #random num pra  enviar no topico "/door_command/response" o numero do compartimento
-                        #random das portas livres e enviar no topico "/door_command/response" o numero do compartimento
+                        client.publish(topic_response, payload=buffer, qos=2)
                     else:
                         print(f"user: {user.name} isn't using a compartment, user is keeping objects")
 
@@ -105,19 +100,15 @@ def init_mqtt(app):
                             chosen_number = random.choice(available_numbers)
                             print(f"Chosen number: {chosen_number}")
                             buffer = ':'.join([str(chosen_number) , locker_name, tag, 'store'])
-                            client.publish("/door_command/response", payload=buffer, qos=2)
+                            client.publish(topic_response, payload=buffer, qos=2)
                         else:
                             buffer = ':'.join([str(-1) , locker_name, tag])
-                            client.publish("/door_command/response", payload=buffer, qos=2)
+                            client.publish(topic_response, payload=buffer, qos=2)
                             print("No available compartments")
 
                 else:
-                    return  
-            #decodifica  a mensagem
-            #ver de qual topico veio
-            #dependendo ele verifica se tem no banco de dados tal usuario
-            #envia outra mensagem pra liberar a porta
-            elif msg.topic == "/door/info":
+                    return 
+            elif msg.topic == topic_send_info:
 
                 parts = msg.payload.decode('utf-8', errors='ignore').split(':')
                 if len(parts) == 5:
@@ -146,18 +137,7 @@ def init_mqtt(app):
                     else:
                         set_locker_schedule(time1, time2, user.id, locker.id, num_compartment)
 
-
                     print(f"Mensagem recebida: {msg.topic} -> {msg.payload.decode('utf-8', errors='ignore')}")
-                #se num compartment ta em uso, busco o id do LockerSchedules pelo open_time e close_time
-                # preencho os timestamps com retrieve_time e end_retrieve_time apago o CompartmentUsage
-
-                #se num compartment nao ta em uso, preencho os timestamps do CompartmentUsage e LockerSchedules
-                # com open_time e close_time
-
-                #del published_users[user.id]
-                #print(f"Mensagem recebida: {msg.topic} -> {msg.payload.decode('utf-8', errors='ignore')}")
-
-
 
     @mqtt.on_disconnect()
     def handle_disconnect(client, userdata, rc):
