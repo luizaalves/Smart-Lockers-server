@@ -3,12 +3,43 @@ from wtforms import StringField, PasswordField, SubmitField, SelectField
 from wtforms.validators import DataRequired, Email, EqualTo
 
 class ResetPasswordForm(FlaskForm):
+    """
+    Formulário para redefinição de senha.
+
+    Este formulário é utilizado para que o usuário possa redefinir sua senha após ter recebido
+    um link ou código de recuperação. O campo de email é exibido como somente leitura para
+    assegurar que o usuário não o modifique.
+
+    Atributos:
+        email (StringField): Campo de entrada para o endereço de email do usuário.
+                             Este campo é somente leitura para evitar modificações.
+        new_password (PasswordField): Campo de entrada para a nova senha.
+                                      Validação: O campo é obrigatório.
+        confirm_password (PasswordField): Campo de entrada para confirmar a nova senha.
+                                          Validação: O campo é obrigatório e deve corresponder ao valor de 'new_password'.
+        submit (SubmitField): Botão para enviar e confirmar a nova senha definida.
+    """
     email = StringField('Email', render_kw={'readonly': True})
     new_password = PasswordField('Nova Senha', validators=[DataRequired()])
     confirm_password = PasswordField('Confirmar Nova Senha', validators=[DataRequired(), EqualTo('new_password', message='As senhas devem corresponder.')])
     submit = SubmitField('Enviar')
 
 class ForgotPasswordForm(FlaskForm):
+    """
+    Formulário para recuperação de senha.
+
+    Este formulário é utilizado para permitir que o usuário solicite um link de redefinição de senha
+    ou insira um código de recuperação, caso já tenha recebido um, para redefinir sua senha.
+
+    Atributos:
+        email (StringField): Campo de entrada para o endereço de email do usuário.
+                             Validação: O campo é obrigatório e deve ser um endereço de email válido.
+        submit (SubmitField): Botão para enviar o link de redefinição de senha para o email fornecido.
+        link (SubmitField): Botão para permitir ao usuário indicar que já possui um link de redefinição de senha.
+        code (StringField): Campo de entrada para o código de recuperação enviado ao usuário.
+                            Este campo é opcional e deve ser preenchido caso o usuário escolha validar um código.
+        submit_code (SubmitField): Botão para validar o código de recuperação inserido no campo 'code'.
+    """
     email = StringField('Email', validators=[DataRequired(), Email()])
     submit = SubmitField('Enviar link de redefinição')
     link = SubmitField('Já possuo link de redefinição')
@@ -16,7 +47,18 @@ class ForgotPasswordForm(FlaskForm):
     submit_code = SubmitField('Validar')
 
 class CompartmentAdmin(FlaskForm):
-    compartment = StringField('Compartment')
+    """
+    Formulário para admin se associar a qualquer compartimento em uso.
+
+    Este formulário é utilizado para trocar ou atualizar informações sobre o compartimento
+    e o nome do armário ao qual ele pertence no sistema de gerenciamento de lockers.
+
+    Atributos:
+        compartment (StringField): Campo de entrada para o identificador ou nome do compartimento.
+        locker_name (StringField): Campo de entrada para o nome do armário ao qual o compartimento pertence.
+        submit (SubmitField): Botão de submissão para confirmar a troca ou atualização de dados.
+    """
+    compartment = StringField('Compartment')#TODO obrigatorio
     locker_name = StringField('Locker name')
     submit = SubmitField('Trocar')
 
@@ -87,7 +129,6 @@ class UpdateEmailPasswordForm(FlaskForm): # TODO: talvez eu possa unir os dois, 
                                   Validação: Campo obrigatório.
         submit (SubmitField): Botão de submissão do formulário.
     """
-    #se for email de  quem fez  o login, autoriza
     nome = StringField('Nome', validators=[DataRequired('Campo obrigatório')])
     tag = StringField('Tag', validators=[DataRequired('Campo obrigatório')])
     email = StringField('Novo Email', validators=[DataRequired(), Email()])
@@ -116,7 +157,6 @@ class UpdateEmailForm(FlaskForm):#TODO: Rever, pois se for pra atualizar as prop
                                   Validação: Campo obrigatório.
         submit (SubmitField): Botão de submissão do formulário.
     """
-    #se for o login de um usuario admin, usa esse formulario, dai ele consegue atualizar qualquer usuario
     nome = StringField('Nome', validators=[DataRequired('Campo obrigatório')])
     old_email = StringField('Antigo Email', validators=[DataRequired()])
     email = StringField('Novo Email', validators=[DataRequired(), Email()])
