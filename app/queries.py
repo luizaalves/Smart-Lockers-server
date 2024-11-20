@@ -194,3 +194,102 @@ with current_app.app_context():
         if user is not None:
             user.password = user.set_password(new_password)
             db.session.commit()
+
+    def get_compartment_by_compartment_in_use_user(user_id):
+        """Retorna o objeto compartimento a partir do id do usuario caso esteja associado a algum compartimento em uso"""
+        statement = select(CompartmentUsage).filter_by(user_id=user_id)
+        compartment_in_use = db.session.execute(statement).scalars().first()
+        statement = select(Compartment).filter_by(id=compartment_in_use.compartment_id)
+        compartment = db.session.execute(statement).scalars().first()
+        return compartment
+    
+    def get_user_by_id(id_user):
+        """Retorna o objeto usuário a partir do seu id"""
+        statement = select(User).filter_by(id=id_user)
+        usuario = db.session.execute(statement).scalars().first()
+        return usuario
+    
+    def get_user_by_email(email):
+        statement = select(User).filter_by(email=email)
+        usuario = db.session.execute(statement).scalars().first()
+        return usuario
+    
+    def set_user(nome, email, senha, tag, user_type):
+        usuario = User(
+            name= nome,
+            email=email,
+            password=senha,
+            tag=tag,
+            user_type=user_type
+        )
+        db.session.add(usuario)
+        db.session.commit()
+    
+    def set_password_admin_user(usuario):
+        try:
+            if(usuario.password == 'admin'):
+                usuario.set_password('admin')
+                db.session.commit()
+        except:
+            pass
+
+    def update_email_user(old_email, new_email, password):
+        statement = select(User).filter_by(email=old_email)
+        user = db.session.execute(statement).scalars().first()
+        user.email = new_email
+        if(user.check_password(password)):
+            db.session.commit()
+
+    def update_admin_user(email, name, tag, password):
+        statement = select(User).filter_by(email='admin')
+        user = db.session.execute(statement).scalars().first()
+        user.email = email
+        user.name = name
+        user.tag = tag
+        user.password = password
+        db.session.commit()
+
+    def get_compartment_by_compartiment_in_use_by_user(user_id):
+        statement = select(CompartmentUsage).filter_by(user_id=user_id)
+        compartment_in_use = db.session.execute(statement).scalars().first()
+        if compartment_in_use is not None:
+            statement = select(Compartment).filter_by(id=compartment_in_use.compartment_id)
+            compartment = db.session.execute(statement).scalars().first()
+            return compartment
+        return None
+    
+    def get_compartment_by_number(num, locker_id):
+        statement = select(Compartment).filter_by(number=num, locker_id=locker_id)
+        compartment = db.session.execute(statement).scalars().first()
+        return compartment
+    
+    def get_compartment_in_use_by_id_comp(id_compartment):
+        statement = select(CompartmentUsage).filter_by(compartment_id=id_compartment)
+        compartment_in_use = db.session.execute(statement).scalars().first()
+        return compartment_in_use
+    
+    def set_compartment_in_use_now(user_id, compartment_id, open_time, close_time):
+        new_compartment_in_use = CompartmentUsage(
+            id_user=user_id,
+            open_time=open_time,
+            close_time=close_time,
+            id_compartment=compartment_id
+        )
+        db.session.add(new_compartment_in_use)
+        db.session.commit()
+
+    def get_all_lockers():
+        return LockerSchedules.query.all()
+    
+    def get_all_compartiment_in_use():
+        return CompartmentUsage.query.all()
+    
+    def get_all_lockers_schedules_by_id_user(user_id):
+        statement = select(LockerSchedules).filter_by(user_id=user_id)
+        locker_schedules = db.session.execute(statement).scalars().all()
+        return locker_schedules
+    
+    def get_all_compartment_in_use_by_id_user(user_id):
+        statement = select(CompartmentUsage).filter_by(user_id=user_id)
+        compartment_in_use = db.session.execute(statement).scalars().all()
+        return compartment_in_use

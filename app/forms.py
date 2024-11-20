@@ -141,27 +141,21 @@ class UpdateEmailForm(FlaskForm):#TODO: Rever, pois se for pra atualizar as prop
     Formulário de atualização de email para o aplicativo Flask.
 
     Este formulário é utilizado para atualizar as credenciais de e-mail qualquer usuário. 
-    Deve aparecer somente para usuário do tipo admin. O campo nome pode ser alterado, 
-    assim como o campo e-mail, desde que o campo old_email seja colocado corretamente. 
+    Deve aparecer somente para usuário do tipo admin. O campo email pode ser alterado, 
+    desde que o campo old_email e senha sejam colocados corretamente. 
 
     Atributos:
-        name (StringField): Campo de entrada para o nome do usuário.
-                             Validação: Campo obrigatório.
         old_email (StringField): Campo de entrada para o endereço de e-mail atual do usuário.
                                   Validação: Campo obrigatório.
         email (StringField): Campo de entrada para o novo endereço de email do usuário.
                              Validação: Campo obrigatório.
         password (PasswordField): Campo de entrada para a senha do usuário.
                                   Validação: Campo obrigatório.
-        user_type (SelectField): Campo de seleção para o tipo de permissão que terá o usuário. [admin ou comum]
-                                  Validação: Campo obrigatório.
         submit (SubmitField): Botão de submissão do formulário.
     """
-    nome = StringField('Nome', validators=[DataRequired('Campo obrigatório')])
     old_email = StringField('Antigo Email', validators=[DataRequired()])
     email = StringField('Novo Email', validators=[DataRequired(), Email()])
     senha = PasswordField('Senha', validators=[DataRequired()])
-    tipo_usuario = SelectField('Tipo de Usuário', choices=[('comum', 'Comum'), ('admin', 'Admin')], validators=[DataRequired('Campo obrigatório')])
     submit = SubmitField('Atualizar')
 
 
@@ -170,28 +164,18 @@ class UpdatePasswordForm(FlaskForm):
     Formulário de atualização de email e senha para o aplicativo Flask.
     
     Este formulário é utilizado para atualizar as credenciais de senha de qualquer usuário. 
-    Deve aparecer somente para usuário do tipo admin. O campo nome pode ser alterado, 
-    assim como o campo senha, desde que o campo email seja colocado corretamente. 
+    O campo senha pode ser alterado, desde que o campo email seja colocado corretamente. 
 
         Atributos:
-        name (StringField): Campo de entrada para o nome do usuário.
-                             Validação: Campo obrigatório.
-        old_email (StringField): Campo de entrada para o endereço de e-mail atual do usuário.
-                                  Validação: Campo obrigatório.
         email (StringField): Campo de entrada para o novo endereço de email do usuário.
                              Validação: Campo obrigatório.
         password (PasswordField): Campo de entrada para a senha do usuário.
                                   Validação: Campo obrigatório.
         confirm_password (PasswordField): Campo de entrada para a senha do usuário.
                                   Validação: Campo obrigatório.
-        user_type (SelectField): Campo de seleção para o tipo de permissão que terá o usuário. [admin ou comum]
-                                  Validação: Campo obrigatório.
         submit (SubmitField): Botão de submissão do formulário.
     """
-    #se for o login de um usuario admin, usa esse formulario, dai ele consegue atualizar qualquer usuario
-    nome = StringField('Nome', validators=[DataRequired('Campo obrigatório')])
     email = StringField('Email', validators=[DataRequired()])
     senha = PasswordField('Senha', validators=[DataRequired()])
     confirmar_senha = PasswordField('Confirmar Nova Senha', validators=[DataRequired(), EqualTo('senha', message='As senhas devem corresponder')])
-    tipo_usuario = SelectField('Tipo de Usuário', choices=[('comum', 'Comum'), ('admin', 'Admin')], validators=[DataRequired('Campo obrigatório')])
     submit = SubmitField('Atualizar')

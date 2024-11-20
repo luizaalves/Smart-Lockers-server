@@ -8,7 +8,6 @@
         <div class="col-md-4">
             <form method="POST" action="{{ url_for('update_email') }}">
                 {{ form.hidden_tag() }}
-                {{ wtf.form_field(form.nome) }}
                 {{ wtf.form_field(form.old_email) }}
                 {{ wtf.form_field(form.email) }}
                 <button type="button" id="checkEmail">Verificar Email</button><br>
@@ -17,7 +16,6 @@
                     <span style="color: red;">[{{ error }}]</span>
                 {% endfor %}
                 {{ wtf.form_field(form.senha) }}
-                {{ wtf.form_field(form.tipo_usuario) }}
                 {{ wtf.form_field(form.submit, class_='btn btn-primary') }}
             </form>
         </div>

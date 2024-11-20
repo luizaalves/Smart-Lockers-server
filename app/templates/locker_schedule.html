@@ -46,7 +46,6 @@
         </tr>
       </thead>
       <tbody>
-        {% if type == 'admin' %}
           {% for compartment in compartment_in_use %}
             <tr>
               <td>{{ compartment.user.name }}</td>
@@ -56,15 +55,7 @@
               <td>{{ compartment.compartments.locker.name }}</td>
             </tr>
           {% endfor %}
-          {% elif type == 'comum' %}
-          <tr>
-            <td>{{ compartment_in_use.user.name }}</td>
-            <td>{{ compartment_in_use.open_time }}</td>
-            <td>{{ compartment_in_use.close_time }}</td>
-            <td>{{ compartment_in_use.compartments.number }}</td>
-            <td>{{ compartment_in_use.compartments.locker.name }}</td>
-          </tr>
-          {% endif %}
+          
       </tbody>
     </table>
     {% else %}

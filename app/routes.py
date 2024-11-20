@@ -9,26 +9,20 @@ from flask_mail import Mail, Message
 
 from . import nav,db
 from .forms import *
-from .models.user import User
-from .models.locker import Lockers
-from .models.locker_schedules import LockerSchedules
-from .models.compartment_usage import CompartmentUsage
-from .models.compartment import Compartment
 
 def init_routes(app):
 
     @app.route('/edit_number', methods=['GET', 'POST'])
     def edit_number():
+        """
+        Associa algum compartimento já em uso ao admin logado
+        """
         if session.get('logado'):
             user_id = session['usuario']
-            statement = select(User).filter_by(id=user_id)
-            usuario = db.session.execute(statement).scalars().first()
+            usuario = get_user_by_id(user_id)
             if(usuario.user_type=='admin'):
-                statement = select(CompartmentUsage).filter_by(user_id=user_id)
-                compartment_in_use = db.session.execute(statement).scalars().first()
-                statement = select(Compartment).filter_by(id=compartment_in_use.compartment_id)
-                compartment = db.session.execute(statement).scalars().first()
-
+                compartment = get_compartment_by_compartment_in_use_user(user_id)
+                
                 form = CompartmentAdmin()
 
                 if form.validate_on_submit():
@@ -62,14 +56,13 @@ def init_routes(app):
         menu = Navbar('Smart Locks Server')
         if session.get('logado'):
             user_id = session['usuario']
-            statement = select(User).filter_by(id=user_id)
-            usuario_logado = db.session.execute(statement).scalars().first()
+            usuario_logado = get_user_by_id(user_id)
             menu.items.append(Text('Hello, '+usuario_logado.name))
             if(usuario_logado.user_type=='admin'):
                 menu.items.append(View('Registrar usuário', 'register'))
                 if(usuario_logado.email!='admin'):
                     menu.items.append(View('Atualizar e-mail usuário', 'update_email'))
-                    menu.items.append(View('Atualizar senha usuário', 'update_password'))
+            menu.items.append(View('Atualizar senha usuário', 'update_password'))
             menu.items.append(View('Exit', 'sair'))
             return menu
         menu.items = [View('Início', 'inicial')]
@@ -96,50 +89,30 @@ def init_routes(app):
         if session.get('logado'):
             form = CompartmentAdmin()
             user_id = session['usuario']
-            statement = select(User).filter_by(id=user_id)
-            usuario = db.session.execute(statement).scalars().first()
+            usuario = get_user_by_id(user_id)
             locker_schedules = None
             if(usuario.user_type == 'admin'):
-                statement = select(CompartmentUsage).filter_by(user_id=user_id)
-                compartment_in_use = db.session.execute(statement).scalars().first()
+                compartment = get_compartment_by_compartiment_in_use_by_user(user_id)
                 
-                if compartment_in_use is not None:
-                    statement = select(Compartment).filter_by(id=compartment_in_use.compartment_id)
-                    compartment = db.session.execute(statement).scalars().first()
-                    print(f"compartment num: {compartment.number}")
+                if compartment is not None:
+                    form.compartment.data = compartment.number
+                    form.locker_name.data = compartment.locker.name
 
-                    if compartment is not None:
-                        form.compartment.data = compartment.number
-                        form.locker_name.data = compartment.locker.name
-
-                if form.validate_on_submit():
-                    statement = select(Lockers).filter_by(name=form.locker_name.data)
-                    locker = db.session.execute(statement).scalars().first()
-                    if locker is not None:
-                        statement = select(Compartment).filter_by(number=form.compartment.data, locker_id=locker.id)#add o locker_name
-                        compartment = db.session.execute(statement).scalars().first()
-                        if compartment is not None:
-                            statement = select(CompartmentUsage).filter_by(compartment_id=compartment.id)
-                            compartment_in_use = db.session.execute(statement).scalars().first()
-                            if compartment_in_use is not None:
-                                new_compartment_in_use = CompartmentUsage(
-                                    id_user=user_id,
-                                    open_time=datetime.now(),
-                                    close_time=datetime.now(),
-                                    id_compartment=compartment.id
-                                )
-                                db.session.add(new_compartment_in_use)
-                                db.session.commit()
+                if request.method == 'POST':
+                    form = CompartmentAdmin()
+                    if form.validate_on_submit():
+                        locker = get_locker(form.locker_name.data)
+                        if locker is not None:
+                            compartment_to_choose = get_compartment_by_number(form.compartment.data, locker.id)
+                            if compartment is None and compartment_to_choose is not None:
+                                set_compartment_in_use_now(user_id, compartment_to_choose.id, datetime.now(), datetime.now())
                                 return redirect(url_for('inicial'))
 
-                locker_schedules = LockerSchedules.query.all()    
-                compartment_in_use = CompartmentUsage.query.all()
+                locker_schedules = get_all_lockers()   
+                compartment_in_use = get_all_compartiment_in_use()
             else:
-                statement = select(LockerSchedules).filter_by(user_id=user_id)
-                locker_schedules = db.session.execute(statement).scalars().all()
-                statement = select(CompartmentUsage).filter_by(user_id=user_id)
-                compartment_in_use = db.session.execute(statement).scalars().first()
-
+                locker_schedules = get_all_lockers_schedules_by_id_user(user_id)
+                compartment_in_use = get_all_compartment_in_use_by_id_user(user_id)
             return render_template('locker_schedule.html', locker_schedules=locker_schedules, compartment_in_use=compartment_in_use, type = usuario.user_type, form=form)
         session['usuario'] = None
         session['logado'] = False
@@ -158,14 +131,9 @@ def init_routes(app):
     def login():
         form = LoginForm()
         if form.validate_on_submit():
-            statement = select(User).filter_by(email=form.email.data)
-            usuario = db.session.execute(statement).scalars().first()
-            try:
-                if(usuario.password == 'admin'):
-                    usuario.set_password('admin')
-                    db.session.commit()
-            except:
-                pass
+            usuario = get_user_by_email(form.email.data)
+            set_password_admin_user(usuario)
+
             if usuario is not None:
                 if usuario.check_password(form.password.data):
                     session['logado']=True
@@ -214,6 +182,7 @@ def init_routes(app):
                 else:
                     return redirect(url_for('login'))
         return render_template('forgot_password.html', form=form)
+    
     @app.route('/reset_password', methods=['GET','POST'])
     def reset_password():
         form = ResetPasswordForm()
@@ -234,15 +203,7 @@ def init_routes(app):
         if request.method == 'POST':
             logging.info('Form submitted')
             if form.validate_on_submit():
-                usuario = User(
-                    name= form.nome.data,
-                    email=form.email.data,
-                    password=form.senha.data,
-                    tag=form.tag.data,
-                    user_type=form.tipo_usuario.data
-                )
-                db.session.add(usuario)
-                db.session.commit()
+                set_user(form.nome.data, form.email.data, form.senha.data, form.tag.data, form.tipo_usuario.data)
                 logging.info('User registered successfully')
                 return redirect(url_for('inicial'))
             else:
@@ -254,8 +215,7 @@ def init_routes(app):
     @app.route('/check_email', methods=['POST'])
     def check_email():
         email = request.form.get('email')
-        statement = select(User).filter_by(email=email)
-        user = db.session.execute(statement).scalars().first()
+        user = get_user_by_email(email)
         if user:
             return jsonify({'exists': True})
         return jsonify({'exists': False})
@@ -265,15 +225,9 @@ def init_routes(app):
     def update_email():
         form = UpdateEmailForm()
         if form.validate_on_submit():
-            statement = select(User).filter_by(email=form.old_email.data)
-            user = db.session.execute(statement).scalars().first()
-            user.email = form.email.data
-            user.name = form.nome.data
-            user.user_type=form.tipo_usuario.data
-            if(user.check_password(form.senha.data)):
-                db.session.commit()
-                print('Suas informações foram atualizadas com sucesso!')
-                return redirect(url_for('inicial'))
+            update_email_user(form.old_email.data, form.email.data, form.senha.data)
+            print('Suas informações foram atualizadas com sucesso!')
+            return redirect(url_for('inicial'))
         return render_template('update_email.html', form=form)
     
     @app.route('/update-password', methods=['GET', 'POST'])
@@ -281,7 +235,10 @@ def init_routes(app):
     def update_password():
         form = UpdatePasswordForm()
         if form.validate_on_submit():
-            update_password_user(form.email.data, form.confirmar_senha.data)
+            user_id = session['usuario']
+            usuario = get_user_by_id(user_id)
+            if usuario.email == form.email.data or usuario.user_type == "admin":
+                update_password_user(form.email.data, form.confirmar_senha.data)
             
             print('Suas informações foram atualizadas com sucesso!')
             return redirect(url_for('inicial'))
@@ -295,13 +252,7 @@ def init_routes(app):
             return redirect(url_for('inicial'))
         form = UpdateEmailPasswordForm()
         if form.validate_on_submit():
-            statement = select(User).filter_by(email='admin')
-            user = db.session.execute(statement).scalars().first()
-            user.email = form.email.data
-            user.name = form.nome.data
-            user.tag = form.tag.data
-            user.password = form.confirmar_senha.data
-            db.session.commit()
+            update_admin_user(form.email.data, form.nome.data, form.tag.data, form.confirmar_senha.data)
             print('Suas informações foram atualizadas com sucesso!')
             return redirect(url_for('inicial'))
         return render_template('update.html', form=form)
